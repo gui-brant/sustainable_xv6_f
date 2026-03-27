@@ -92,7 +92,11 @@ struct proc {
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
   int energy;                  // Energy associated to process
-  uint64 sched_round           // Tracks round-robin scheduling
+  uint64 sched_round;          // Tracks round-robin scheduling
+  uint64 cpu_ticks;            // Timer ticks spent RUNNING
+  uint64 sleep_ticks;          // Timer ticks spent SLEEPING
+  uint64 wakeups;              // Number of times woken from SLEEPING
+  uint64 context_switches;     // Number of times scheduled to run
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

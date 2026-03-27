@@ -14,6 +14,26 @@ struct proc *initproc;
 
 int nextpid = 1;
 uint64 current_sched_round = 1;
+
+#define ENERGY_CPU_TICK_COST         8
+#define ENERGY_SLEEP_TICK_COST       2
+#define ENERGY_WAKEUP_COST           1
+#define ENERGY_CONTEXT_SWITCH_COST   1
+
+static int
+proc_energy_locked(struct proc *p)
+{
+  uint64 total = 0;
+
+  total += p->cpu_ticks * ENERGY_CPU_TICK_COST;
+  total += p->sleep_ticks * ENERGY_SLEEP_TICK_COST;
+  total += p->wakeups * ENERGY_WAKEUP_COST;
+  total += p->context_switches * ENERGY_CONTEXT_SWITCH_COST;
+
+  if(total > 0x7fffffff)
+    return 0x7fffffff;
+  return (int)total;
+}
 struct spinlock pid_lock;
 
 extern void forkret(void);
@@ -128,6 +148,10 @@ found:
   // Initializing a process will default the energy and round-robin scheduling values to 0 (We don't want a new process to inherit energy).
   p->energy = 0;
   p->sched_round = 0;
+  p->cpu_ticks = 0;
+  p->sleep_ticks = 0;
+  p->wakeups = 0;
+  p->context_switches = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -176,6 +200,10 @@ freeproc(struct proc *p)
   // When freeing a process, we clear all values, including these so that a new process doesn't inherit old data.
   p->energy = 0;
   p->sched_round = 0;
+  p->cpu_ticks = 0;
+  p->sleep_ticks = 0;
+  p->wakeups = 0;
+  p->context_switches = 0;
 
   p->state = UNUSED;
 }
@@ -456,9 +484,10 @@ scheduler(void)
 
         // Checking is Round-Robin is still valid (if the process hasn't participated this round yet).
         if(p->sched_round < current_sched_round){
-          if(best_pid == -1 || p->energy < best_energy){
+          int p_energy = proc_energy_locked(p);
+          if(best_pid == -1 || p_energy < best_energy){
             best_pid = p->pid;
-            best_energy = p->energy;
+            best_energy = p_energy;
           }
         }
       }
@@ -487,6 +516,7 @@ scheduler(void)
 
         p->sched_round = current_sched_round;
         p->state = RUNNING;
+        p->context_switches++;
         c->proc = p;
 
         swtch(&c->context, &p->context);
@@ -626,6 +656,7 @@ wakeup(void *chan)
     if(p != myproc()){
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
+        p->wakeups++;
         p->state = RUNNABLE;
       }
       release(&p->lock);
@@ -647,6 +678,7 @@ kkill(int pid)
       p->killed = 1;
       if(p->state == SLEEPING){
         // Wake process from sleep().
+        p->wakeups++;
         p->state = RUNNABLE;
       }
       release(&p->lock);
@@ -706,6 +738,23 @@ either_copyin(void *dst, int user_src, uint64 src, uint64 len)
   }
 }
 
+void
+proc_tick_accounting(void)
+{
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state == RUNNING){
+      p->cpu_ticks++;
+    } else if(p->state == SLEEPING){
+      p->sleep_ticks++;
+    }
+    p->energy = proc_energy_locked(p);
+    release(&p->lock);
+  }
+}
+
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.
@@ -731,7 +780,14 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %s %s cpu=%ld sleep=%ld wake=%ld cs=%ld",
+           p->pid,
+           state,
+           p->name,
+           p->cpu_ticks,
+           p->sleep_ticks,
+           p->wakeups,
+           p->context_switches);
     printf("\n");
   }
 }
@@ -744,7 +800,8 @@ getenergybypid(int pid)
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->pid == pid){
-      int energy = p->energy;
+      int energy = proc_energy_locked(p);
+      p->energy = energy;
       release(&p->lock);
       return energy;
     }
