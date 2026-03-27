@@ -103,6 +103,7 @@ extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_getenergy(void);
 extern uint64 sys_setenergybudget(void);
+extern uint64 sys_listprocs(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -130,6 +131,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_getenergy] sys_getenergy,
 [SYS_setenergybudget] sys_setenergybudget,
+[SYS_listprocs] sys_listprocs,
 };
 
 void

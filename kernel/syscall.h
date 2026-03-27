@@ -22,3 +22,4 @@
 #define SYS_close  21
 #define SYS_getenergy 22
 #define SYS_setenergybudget 23
+#define SYS_listprocs 24

@@ -2,6 +2,13 @@
 
 struct stat;
 
+struct procinfo {
+	int pid;
+	int state;
+	int energy;
+	char name[16];
+};
+
 // system calls
 int fork(void);
 int exit(int) __attribute__((noreturn));
@@ -26,6 +33,7 @@ int pause(int);
 int uptime(void);
 int getenergy(int pid);
 int setenergybudget(int pid, int budget);
+int listprocs(struct procinfo *buf, int max);
 
 // ulib.c
 int stat(const char*, struct stat*);

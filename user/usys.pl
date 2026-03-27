@@ -44,3 +44,4 @@ entry("pause");
 entry("uptime");
 entry("getenergy");
 entry("setenergybudget");
+entry("listprocs");

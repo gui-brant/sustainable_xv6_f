@@ -7,6 +7,15 @@
 #include "proc.h"
 #include "vm.h"
 
+extern struct proc proc[NPROC];
+
+struct procinfo {
+  int pid;
+  int state;
+  int energy;
+  char name[16];
+};
+
 
 uint64
 sys_exit(void)
@@ -129,4 +138,45 @@ sys_setenergybudget(void)
   argint(1, &budget);
 
   return setenergybudgetbypid(pid, budget);
+}
+
+uint64
+sys_listprocs(void)
+{
+  uint64 addr;
+  int max;
+  int count = 0;
+  struct proc *p;
+  struct procinfo info;
+
+  argaddr(0, &addr);
+  argint(1, &max);
+
+  if(max < 0)
+    return -1;
+  if(max == 0)
+    return 0;
+
+  for(p = proc; p < &proc[NPROC] && count < max; p++){
+    acquire(&p->lock);
+    if(p->state == UNUSED){
+      release(&p->lock);
+      continue;
+    }
+
+    info.pid = p->pid;
+    info.state = p->state;
+    info.energy = p->energy;
+    safestrcpy(info.name, p->name, sizeof(info.name));
+    release(&p->lock);
+
+    if(copyout(myproc()->pagetable,
+               addr + (uint64)count * sizeof(info),
+               (char *)&info,
+               sizeof(info)) < 0)
+      return -1;
+    count++;
+  }
+
+  return count;
 }
