@@ -97,6 +97,7 @@ struct proc {
   uint64 sleep_ticks;          // Timer ticks spent SLEEPING
   uint64 wakeups;              // Number of times woken from SLEEPING
   uint64 context_switches;     // Number of times scheduled to run
+  int energy_budget;           // Max allowed energy; -1 means unlimited
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

@@ -69,7 +69,7 @@ int
 main(int argc, char *argv[])
 {
   int base_loops = 20000000;
-  int children = 10;
+  int children = 6;
   int pfd[2];
   int spawned = 0;
 
@@ -84,17 +84,16 @@ main(int argc, char *argv[])
     children = 8;
 
   if(pipe(pfd) < 0){
-    printf("schedtest: pipe failed\n");
+    printf("[schedtest] error: pipe failed\n");
     exit(1);
   }
 
-  printf("schedtest: parent=%d base_loops=%d children=%d\n",
-         getpid(), base_loops, children);
+  printf("starting sched test\n");
 
   for(int idx = 0; idx < children; idx++){
     int pid = fork();
     if(pid < 0){
-      printf("schedtest: fork failed at idx=%d\n", idx);
+      printf("[schedtest] error: fork failed idx=%d\n", idx);
       break;
     }
 
@@ -132,7 +131,7 @@ main(int argc, char *argv[])
     if(readn(pfd[0], &res, sizeof(res)) < 0)
       break;
 
-    printf("child done  pid=%d mode=%d loops=%d energy=%d->%d dticks=%d\n",
+    printf("[schedtest] child pid=%d mode=%d loops=%d energy=%d->%d dticks=%d\n",
            res.pid,
            res.mode,
            res.loops,
@@ -147,7 +146,7 @@ main(int argc, char *argv[])
     int st = 0;
     int done = wait(&st);
     if(done >= 0)
-      printf("parent: reaped pid=%d status=%d\n", done, st);
+      printf("[schedtest] reap pid=%d status=%d\n", done, st);
   }
 
   exit(0);

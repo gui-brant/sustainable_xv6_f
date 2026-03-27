@@ -118,3 +118,15 @@ sys_getenergy(void)
 
   return getenergybypid(pid);
 }
+
+uint64
+sys_setenergybudget(void)
+{
+  int pid;
+  int budget;
+
+  argint(0, &pid);
+  argint(1, &budget);
+
+  return setenergybudgetbypid(pid, budget);
+}

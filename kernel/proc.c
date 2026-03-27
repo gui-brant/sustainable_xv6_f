@@ -152,6 +152,7 @@ found:
   p->sleep_ticks = 0;
   p->wakeups = 0;
   p->context_switches = 0;
+  p->energy_budget = -1;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -204,6 +205,7 @@ freeproc(struct proc *p)
   p->sleep_ticks = 0;
   p->wakeups = 0;
   p->context_switches = 0;
+  p->energy_budget = -1;
 
   p->state = UNUSED;
 }
@@ -751,6 +753,13 @@ proc_tick_accounting(void)
       p->sleep_ticks++;
     }
     p->energy = proc_energy_locked(p);
+    if(p->energy_budget >= 0 && p->energy > p->energy_budget){
+      p->killed = 1;
+      if(p->state == SLEEPING){
+        p->wakeups++;
+        p->state = RUNNABLE;
+      }
+    }
     release(&p->lock);
   }
 }
@@ -804,6 +813,27 @@ getenergybypid(int pid)
       p->energy = energy;
       release(&p->lock);
       return energy;
+    }
+    release(&p->lock);
+  }
+
+  return -1;
+}
+
+int
+setenergybudgetbypid(int pid, int budget)
+{
+  struct proc *p;
+
+  if(budget < -1)
+    return -1;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      p->energy_budget = budget;
+      release(&p->lock);
+      return 0;
     }
     release(&p->lock);
   }

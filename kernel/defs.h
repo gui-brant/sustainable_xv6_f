@@ -102,6 +102,7 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             getenergybypid(int pid);
+int             setenergybudgetbypid(int pid, int budget);
 void            proc_tick_accounting(void);
 
 // swtch.S
@@ -138,6 +139,7 @@ int             fetchstr(uint64, char*, int);
 int             fetchaddr(uint64, uint64*);
 void            syscall();
 uint64          sys_getenergy(void);
+uint64          sys_setenergybudget(void);
 
 // trap.c
 extern uint     ticks;
