@@ -144,6 +144,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_logstress\
 	$U/_forphan\
+	$U/_schedtest\
 	$U/_dorphan\
 	$U/_energytest\
 
